@@ -1,0 +1,103 @@
+---
+title: "Imagining the ideal of spatial data manipulation in R"
+author: "Elaine McVey"
+date: "March 31, 2016"
+output: html_document
+---
+
+
+## Introduction
+
+Spatial data is difficult to work with in R for reasons documented [here](https://github.com/rstats-gsoc/gsoc2016/wiki/spatula:-a-sane,-user-centric-(in-the-mental-model-sense)-spatial-operations-package-for-R) and
+[here](https://github.com/edzer/sfr).  What dplyr and tidyr have done for the organization and manipulation of dataframes, a new set of tools could do for working with spatial data in R.  This document imagines the ideal of how such tools might work.  Being unencumbered by technical details, it may be unrealistic, but aspires to help prompt useful discussion of what is possible.
+
+## Input/output of spatial data
+
+* Read in shapefiles by specifying just the folder path (no layers) into R object
+* Read from geojson into R object
+* Read from WKT into R object
+* Read data from geo-enabled databases (ex. Postgres + PostGIS) into R object
+
+All formats that can be read in should be able to be created and written out.  Also, conversion functions to sp objects should be provided for compatibility with existing packages and code.
+
+## Objects for spatial data
+
+What if spatial data could be stored in a data_frame instead of a specialized object?  Like a geo-enabled database, some columns would contain geometries (where the entries would be simple feature types - polygons, multilines, points, etc.).  These would have to be associated with attributes like projection.  In theory, this would allow spatial analysis to take advantage of all the existing tools for manipulating dataframes with special functions needed just to operate on geometry columns (which would contain simple features) within this framework.
+
+## Manipulation of spatial data
+
+Considering operations and verbs for spatial data:
+
+* filter, rename: should work just like dplyr
+* group_by, summarize: should work like dplyr, but when a summary or mutation is being performed on a geometry variable, it must be a valid function for this type of data
+* operations:
+  + union, intersection, etc. of spatial objects
+  + project/reproject
+* bind_rows() should work on dataframes with geometry columns (which shouldn't be a problem given no reliance on IDs)
+  
+## Examples
+
+Consider an example in which we want to compare the House districts of North Carolina before and after the courts ordered them redrawn based on shape regularity and racial distribution. 
+
+We have the following dataframes: 
+
+1. district_previous_df One row per house district in NC as of Jan 1, 2016 with columns: 
+  + districtnum
+  + districtpolygon (geometry column with simple feature polygon)
+
+2. district_proposed_df One row per house district in NC proposed after the court ruling with columns: 
+  + districtnum
+  + districtpolygon (geometry column with simple feature polygon)
+
+3. census_bg_df One row per census block group in NC with columns:
+  + bgid
+  + pctwhite
+  + pctblack
+  + numwhite
+  + numblack
+  + population 
+  + bgpolygon (geometry column with simple feature polygon)
+
+```
+# Combine the district data
+
+district_previous_df$version <- 'prev'
+district_proposed_df$version <- 'prop'
+
+all_district_df <- bind_rows(district_previous_df, district_proposed_df) %>%
+  mutate(district_id = paste0(version, '_', districtnum))
+  
+# Calculate regularity of district shape
+
+# a function that assesses the circularity of a polygon
+circularity <- function(polygon) {
+  ...
+}
+
+all_district_df <- all_district_df %>%
+  mutate(regularity_score = circularity(districtpolygon))
+  
+# Summarize district shape regularity by district version
+summary_reg_df <- all_district_df %>%
+  group_by(version) %>%
+  summarize(mean_reg = mean(regularity_score),
+            min_reg = min(regularity_score))
+
+```
+
+The courts ordered districts redrawn based on racial bias. We can use race data at the census block level to estimate the racial makeup of each district.  This is a somewhat more complicated analysis than the regularity calculation. _add example_
+
+Perhaps we'd like to experiment with different ways the districts could be drawn.  If we assume we'll build districts as a superset of block groups, after block groups have been labeled with their assigned district (in column assigned_district), we'd want to do something like this:
+
+```
+# Calculate both the population statistics and the shapes for the new districts
+
+new_district_df <- census_bg_df %>%
+  group_by(assigned_district) %>%
+  summarize(num_black = sum(numblack),
+            num_white = sum(numwhite),
+            population = sum(population),
+            districtpolygon = union(bgpolygon),
+            districtarea = area(districtpolygon))
+
+```
