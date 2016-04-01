@@ -17,8 +17,8 @@ library(acs)
 
 # Load data ---------------------------------------------------------------
 
-attach('rdata/county_shapes_simp.rda')
-attach('rdata/sub_stops.rda')
+load('county_shapes_simp.rda')
+load('sub_stops.rda')
 
 # Get transit stop locations ----------------------------------------------
 
@@ -136,8 +136,7 @@ get_area <- function(bg_spdf, intersect_spy) {
 # Example workflow --------------------------------------------------------
 
 stops_spt <- get_stops(agency = 'fast')
-shape_spy <- make_stop_shape(stops_spt, stop_radius = .5)
+shape_spy <- make_stop_shape(stops_spt, radius = .5)
 bg_spdf <- get_bg(shape_spy)
 intersect_spy <- get_intersect(shape_spy, bg_spdf)
 area_df <- get_area(bg_spdf, intersect_spy)
-
