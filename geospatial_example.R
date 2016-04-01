@@ -135,7 +135,7 @@ get_area <- function(bg_spdf, intersect_spy) {
 
 # Example workflow --------------------------------------------------------
 
-stops_spt <- get_stops(agency_name = 'fast')
+stops_spt <- get_stops(agency = 'fast')
 shape_spy <- make_stop_shape(stops_spt, stop_radius = .5)
 bg_spdf <- get_bg(shape_spy)
 intersect_spy <- get_intersect(shape_spy, bg_spdf)
