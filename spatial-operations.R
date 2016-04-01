@@ -8,7 +8,7 @@ library(tmap) # for vis
 
 # get points data
 download.file("https://data.sfgov.org/resource/w969-5mn4.json", "data/w969-5mn4.json")
-p = fromJSON("data/w969-5mn4.json")
+p = fromJSON("https://data.sfgov.org/resource/w969-5mn4.json")
 p_orig = p
 p = SpatialPoints(coords = cbind(as.numeric(p$latitude$longitude), as.numeric(p$latitude$latitude)))
 
@@ -27,7 +27,7 @@ plot(p)
 r <- raster(x = sf, ncols = 3, nrows = 3)
 sf9 = as(r, "SpatialPolygons")
 plot(sf9, add = T)
-r <- raster(x = sf, ncols = 4, nrows = 4)
+r = raster(x = sf, ncols = 4, nrows = 4)
 sf16 = as(r, "SpatialPolygons")
 plot(sf16, add = T)
 
@@ -41,3 +41,9 @@ sf9_point_count = aggregate(p ~ sf9, FUN = length)
 p = SpatialPointsDataFrame(p, p_orig[1:5])
 sf9_point_count = aggregate(p["spaces"], by = sf9, FUN = length)
 qtm(sf9_point_count, "spaces")
+
+# cut SpatialPolygons 
+plot(sf)
+plot(sf9[1,], add = T)
+sf_subset = rgeos::gIntersection(sf, sf9[1,])
+plot(sf_subset, col = "green", add = T)
