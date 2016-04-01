@@ -1,0 +1,75 @@
+---
+title: "Spatial objects as nested data_frames"
+author: "Elaine McVey"
+date: "April 1, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an example of how a the information in an sp class (in this case, SpatialPolygonsDataFrame) could be represented in a nested data_frame.  
+
+```{r load}
+library(sp)
+library(tibble)
+```
+
+Some example data from census block groups:
+
+```{r data}
+
+# Load an SpatialPolygonsDataFrame to work with -- bg_spdf from source('geospatial_example.R')
+attach('rdata/bg_example.rda')
+
+# Just use a small set
+sm_spdf <- bg_spdf[1:3, ]
+
+```
+
+This is the structure of the SpatialPolygonsDataFrame class S4 object:
+
+```{r sp}
+
+str(sm_spdf)
+
+```
+
+To convert to a nested data_frame, I first put the data into a data_frame, and then extracted the coordinates into a data_frame that is nested.  The coordindates data_frame then gets the other four slots of the Polygon objects as attributes.
+
+```{r convert}
+
+sm_df <- as_data_frame(sm_spdf@data)
+
+# Convert sp class Polygon to a data_frame with attributes
+convert_polygon <- function(polygon) {
+  
+  df <- tibble::as_data_frame(polygon@Polygons[[1]]@coords)
+  
+  polygon_attr <- list(labpt = polygon@Polygons[[1]]@labpt,
+                       area = polygon@Polygons[[1]]@area,
+                       hole = polygon@Polygons[[1]]@hole,
+                       ringDir = polygon@Polygons[[1]]@ringDir)
+  
+  attributes(df) <- c(attributes(df), polygon_attr)
+  
+  df
+  
+}
+
+sm_df$polygon <- lapply(sm_spdf@polygons, function(x) convert_polygon(x))
+
+```
+
+This is what the resulting data_frame looks like:
+
+```{r nested}
+
+str(sm_df)
+
+sm_df[ ,c('STATEFP', 'GEOID', 'ALAND', 'polygon')]
+
+```
