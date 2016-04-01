@@ -35,7 +35,6 @@ p_subset = p[sf9[1,]]
 points(p_subset)
 
 # spatial aggregation (points in polygon)
-sf9_point_count = aggregate(p ~ sf9, FUN = length)
 p = SpatialPointsDataFrame(p, p_orig[1:5])
 sf9_point_count = aggregate(p["spaces"], by = sf9, FUN = length)
 qtm(sf9_point_count, "spaces")
