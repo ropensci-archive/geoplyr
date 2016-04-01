@@ -32,7 +32,7 @@ attach('rdata/sub_stops.rda')
 
 get_stops <- function(agency) {
   
-  stops_df <- all_stops_df %>%
+  stops_df <- active_stops_df %>%
     filter(short_name %in% agency)
   
   stops_spt <- SpatialPoints(data.frame(stops_df[, c('longitude', 'latitude')]), proj4string = CRS("+proj=longlat"))
