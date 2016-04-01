@@ -3,11 +3,13 @@
 # devtools::install_github("hrbrmstr/albersusa") # for us data
 library(sp) # for spatial data classes
 library(jsonlite) # for jsons
-library(raster)
+library(raster) # for splitting polygons
+library(tmap) # for vis
 
 # get points data
 download.file("https://data.sfgov.org/resource/w969-5mn4.json", "data/w969-5mn4.json")
 p = fromJSON("data/w969-5mn4.json")
+p_orig = p
 p = SpatialPoints(coords = cbind(as.numeric(p$latitude$longitude), as.numeric(p$latitude$latitude)))
 
 # get and explore polygon data
@@ -33,3 +35,9 @@ plot(sf16, add = T)
 # spatial subsetting
 p_subset = p[sf9[1,]]
 points(p_subset)
+
+# spatial aggregation (points in polygon)
+sf9_point_count = aggregate(p ~ sf9, FUN = length)
+p = SpatialPointsDataFrame(p, p_orig[1:5])
+sf9_point_count = aggregate(p["spaces"], by = sf9, FUN = length)
+qtm(sf9_point_count, "spaces")
