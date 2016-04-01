@@ -7,10 +7,8 @@ library(raster) # for splitting polygons
 library(tmap) # for vis
 
 # get points data
-download.file("https://data.sfgov.org/resource/w969-5mn4.json", "data/w969-5mn4.json")
-p = fromJSON("https://data.sfgov.org/resource/w969-5mn4.json")
-p_orig = p
-p = SpatialPoints(coords = cbind(as.numeric(p$latitude$longitude), as.numeric(p$latitude$latitude)))
+data = fromJSON("https://data.sfgov.org/resource/w969-5mn4.json")
+p = SpatialPoints(coords = cbind(as.numeric(data$latitude$longitude), as.numeric(data$latitude$latitude)))
 
 # get and explore polygon data
 sf = albersusa::counties_composite()
