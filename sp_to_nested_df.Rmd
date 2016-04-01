@@ -38,7 +38,8 @@ str(sm_spdf)
 
 ```
 
-To convert to a nested data_frame, I first put the data into a data_frame, and then extracted the coordinates into a data_frame that is nested.  The coordindates data_frame then gets the other four slots of the Polygon objects as attributes.
+To convert to a nested data_frame, I first put the data into a data_frame.  Then there are two levels of polygon(s).  For each Polygon element of the Polygons list,
+I extracted the coordinates into a data_frame that is nested.  The coordinates data_frame then gets the other four slots of the Polygon objects as attributes (labpt, area, hold, ringDir).  At the Polygons level, the list of Polygon data_frames gets the other four splots of the Polygons object as attributes (plotOrder, labpt, ID, area).  The final result is a data_frame with columns for all the data, and a column polygons that is a list of data_frames, one for each polygon.  In this example, each block group only has a single polygon, but in some cases there would be multiple polygons per row.  I wonder if keeping them as a nested list of data_frames is better than combining the data_frames from the list into a single data_frame and adding the attributes (labpt, area, hold, ringDir) to columns instead?  Or maybe the dependency on sp should stay and the Polygons object itself should be put into the data_frame?
 
 ```{r convert}
 
@@ -47,12 +48,12 @@ sm_df <- as_data_frame(sm_spdf@data)
 # Convert sp class Polygon to a data_frame with attributes
 convert_polygon <- function(polygon) {
   
-  df <- tibble::as_data_frame(polygon@Polygons[[1]]@coords)
+  df <- tibble::as_data_frame(polygon@coords)
   
-  polygon_attr <- list(labpt = polygon@Polygons[[1]]@labpt,
-                       area = polygon@Polygons[[1]]@area,
-                       hole = polygon@Polygons[[1]]@hole,
-                       ringDir = polygon@Polygons[[1]]@ringDir)
+  polygon_attr <- list(labpt = polygon@labpt,
+                       area = polygon@area,
+                       hole = polygon@hole,
+                       ringDir = polygon@ringDir)
   
   attributes(df) <- c(attributes(df), polygon_attr)
   
@@ -60,7 +61,23 @@ convert_polygon <- function(polygon) {
   
 }
 
-sm_df$polygon <- lapply(sm_spdf@polygons, function(x) convert_polygon(x))
+# Convert sp class Polygons to a list of data_frames
+convert_polygons <- function(polygons) {
+
+  polygon_list <- lapply(polygons@Polygons, function(x) convert_polygon(x))
+  
+  polygons_attr <- list(plotOrder = polygons@plotOrder,
+                        labpt = polygons@labpt,
+                        ID = polygons@ID,
+                        area = polygons@area)
+  
+  attributes(polygon_list) <- c(attributes(polygon_list), polygons_attr)
+  
+  polygon_list
+  
+}
+
+sm_df$polygons <- lapply(sm_spdf@polygons, function(x) convert_polygons(x))
 
 ```
 
@@ -70,6 +87,6 @@ This is what the resulting data_frame looks like:
 
 str(sm_df)
 
-sm_df[ ,c('STATEFP', 'GEOID', 'ALAND', 'polygon')]
+sm_df[ ,c('STATEFP', 'GEOID', 'ALAND', 'polygons')]
 
 ```
