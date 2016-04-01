@@ -31,4 +31,5 @@ plot(sf16, add = T)
 
 # spatial operations
 # spatial subsetting
-
+p_subset = p[sf9[1,]]
+points(p_subset)
