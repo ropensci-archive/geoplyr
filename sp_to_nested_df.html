@@ -139,18 +139,18 @@ sm_spdf &lt;- bg_spdf[1:3, ]</code></pre>
 ##   .. .. ..$ : chr [1:2] &quot;min&quot; &quot;max&quot;
 ##   ..@ proj4string:Formal class 'CRS' [package &quot;sp&quot;] with 1 slot
 ##   .. .. ..@ projargs: chr &quot;+proj=longlat +ellps=WGS84&quot;</code></pre>
-<p>To convert to a nested data_frame, I first put the data into a data_frame, and then extracted the coordinates into a data_frame that is nested. The coordindates data_frame then gets the other four slots of the Polygon objects as attributes.</p>
+<p>To convert to a nested data_frame, I first put the data into a data_frame. Then there are two levels of polygon(s). For each Polygon element of the Polygons list, I extracted the coordinates into a data_frame that is nested. The coordinates data_frame then gets the other four slots of the Polygon objects as attributes (labpt, area, hold, ringDir). At the Polygons level, the list of Polygon data_frames gets the other four splots of the Polygons object as attributes (plotOrder, labpt, ID, area). The final result is a data_frame with columns for all the data, and a column polygons that is a list of data_frames, one for each polygon. In this example, each block group only has a single polygon, but in some cases there would be multiple polygons per row. I wonder if keeping them as a nested list of data_frames is better than combining the data_frames from the list into a single data_frame and adding the attributes (labpt, area, hold, ringDir) to columns instead? Or maybe the dependency on sp should stay and the Polygons object itself should be put into the data_frame?</p>
 <pre class="r"><code>sm_df &lt;- as_data_frame(sm_spdf@data)
 
 # Convert sp class Polygon to a data_frame with attributes
 convert_polygon &lt;- function(polygon) {
   
-  df &lt;- tibble::as_data_frame(polygon@Polygons[[1]]@coords)
+  df &lt;- tibble::as_data_frame(polygon@coords)
   
-  polygon_attr &lt;- list(labpt = polygon@Polygons[[1]]@labpt,
-                       area = polygon@Polygons[[1]]@area,
-                       hole = polygon@Polygons[[1]]@hole,
-                       ringDir = polygon@Polygons[[1]]@ringDir)
+  polygon_attr &lt;- list(labpt = polygon@labpt,
+                       area = polygon@area,
+                       hole = polygon@hole,
+                       ringDir = polygon@ringDir)
   
   attributes(df) &lt;- c(attributes(df), polygon_attr)
   
@@ -158,7 +158,23 @@ convert_polygon &lt;- function(polygon) {
   
 }
 
-sm_df$polygon &lt;- lapply(sm_spdf@polygons, function(x) convert_polygon(x))</code></pre>
+# Convert sp class Polygons to a list of data_frames
+convert_polygons &lt;- function(polygons) {
+
+  polygon_list &lt;- lapply(polygons@Polygons, function(x) convert_polygon(x))
+  
+  polygons_attr &lt;- list(plotOrder = polygons@plotOrder,
+                        labpt = polygons@labpt,
+                        ID = polygons@ID,
+                        area = polygons@area)
+  
+  attributes(polygon_list) &lt;- c(attributes(polygon_list), polygons_attr)
+  
+  polygon_list
+  
+}
+
+sm_df$polygons &lt;- lapply(sm_spdf@polygons, function(x) convert_polygons(x))</code></pre>
 <p>This is what the resulting data_frame looks like:</p>
 <pre class="r"><code>str(sm_df)</code></pre>
 <pre><code>## Classes 'tbl_df', 'tbl' and 'data.frame':    3 obs. of  13 variables:
@@ -174,36 +190,51 @@ sm_df$polygon &lt;- lapply(sm_spdf@polygons, function(x) convert_polygon(x))</co
 ##  $ AWATER  : num  0 94587 28801
 ##  $ INTPTLAT: chr  &quot;+35.0490711&quot; &quot;+35.1677694&quot; &quot;+35.0502369&quot;
 ##  $ INTPTLON: chr  &quot;-078.9568618&quot; &quot;-078.8886970&quot; &quot;-078.9280389&quot;
-##  $ polygon :List of 3
-##   ..$ :Classes 'tbl_df', 'tbl' and 'data.frame': 74 obs. of  2 variables:
-##   .. ..$ V1: num  -79 -79 -79 -79 -79 ...
-##   .. ..$ V2: num  35.1 35.1 35.1 35.1 35.1 ...
+##  $ polygons:List of 3
+##   ..$ :List of 1
+##   .. ..$ :Classes 'tbl_df', 'tbl' and 'data.frame':  74 obs. of  2 variables:
+##   .. .. ..$ V1: num  -79 -79 -79 -79 -79 ...
+##   .. .. ..$ V2: num  35.1 35.1 35.1 35.1 35.1 ...
+##   .. .. ..- attr(*, &quot;labpt&quot;)= num  -79 35
+##   .. .. ..- attr(*, &quot;area&quot;)= num 1e-04
+##   .. .. ..- attr(*, &quot;hole&quot;)= logi FALSE
+##   .. .. ..- attr(*, &quot;ringDir&quot;)= int 1
+##   .. ..- attr(*, &quot;plotOrder&quot;)= int 1
 ##   .. ..- attr(*, &quot;labpt&quot;)= num  -79 35
+##   .. ..- attr(*, &quot;ID&quot;)= chr &quot;110&quot;
 ##   .. ..- attr(*, &quot;area&quot;)= num 1e-04
-##   .. ..- attr(*, &quot;hole&quot;)= logi FALSE
-##   .. ..- attr(*, &quot;ringDir&quot;)= int 1
-##   ..$ :Classes 'tbl_df', 'tbl' and 'data.frame': 381 obs. of  2 variables:
-##   .. ..$ V1: num  -78.9 -78.9 -78.9 -78.9 -78.9 ...
-##   .. ..$ V2: num  35.2 35.2 35.2 35.2 35.2 ...
+##   ..$ :List of 1
+##   .. ..$ :Classes 'tbl_df', 'tbl' and 'data.frame':  381 obs. of  2 variables:
+##   .. .. ..$ V1: num  -78.9 -78.9 -78.9 -78.9 -78.9 ...
+##   .. .. ..$ V2: num  35.2 35.2 35.2 35.2 35.2 ...
+##   .. .. ..- attr(*, &quot;labpt&quot;)= num  -78.9 35.2
+##   .. .. ..- attr(*, &quot;area&quot;)= num 0.000887
+##   .. .. ..- attr(*, &quot;hole&quot;)= logi FALSE
+##   .. .. ..- attr(*, &quot;ringDir&quot;)= int 1
+##   .. ..- attr(*, &quot;plotOrder&quot;)= int 1
 ##   .. ..- attr(*, &quot;labpt&quot;)= num  -78.9 35.2
+##   .. ..- attr(*, &quot;ID&quot;)= chr &quot;111&quot;
 ##   .. ..- attr(*, &quot;area&quot;)= num 0.000887
-##   .. ..- attr(*, &quot;hole&quot;)= logi FALSE
-##   .. ..- attr(*, &quot;ringDir&quot;)= int 1
-##   ..$ :Classes 'tbl_df', 'tbl' and 'data.frame': 330 obs. of  2 variables:
-##   .. ..$ V1: num  -78.9 -78.9 -78.9 -78.9 -78.9 ...
-##   .. ..$ V2: num  35.1 35.1 35.1 35.1 35.1 ...
+##   ..$ :List of 1
+##   .. ..$ :Classes 'tbl_df', 'tbl' and 'data.frame':  330 obs. of  2 variables:
+##   .. .. ..$ V1: num  -78.9 -78.9 -78.9 -78.9 -78.9 ...
+##   .. .. ..$ V2: num  35.1 35.1 35.1 35.1 35.1 ...
+##   .. .. ..- attr(*, &quot;labpt&quot;)= num  -78.9 35.1
+##   .. .. ..- attr(*, &quot;area&quot;)= num 0.000243
+##   .. .. ..- attr(*, &quot;hole&quot;)= logi FALSE
+##   .. .. ..- attr(*, &quot;ringDir&quot;)= int 1
+##   .. ..- attr(*, &quot;plotOrder&quot;)= int 1
 ##   .. ..- attr(*, &quot;labpt&quot;)= num  -78.9 35.1
-##   .. ..- attr(*, &quot;area&quot;)= num 0.000243
-##   .. ..- attr(*, &quot;hole&quot;)= logi FALSE
-##   .. ..- attr(*, &quot;ringDir&quot;)= int 1</code></pre>
-<pre class="r"><code>sm_df[ ,c('STATEFP', 'GEOID', 'ALAND', 'polygon')]</code></pre>
+##   .. ..- attr(*, &quot;ID&quot;)= chr &quot;117&quot;
+##   .. ..- attr(*, &quot;area&quot;)= num 0.000243</code></pre>
+<pre class="r"><code>sm_df[ ,c('STATEFP', 'GEOID', 'ALAND', 'polygons')]</code></pre>
 <pre><code>## Source: local data frame [3 x 4]
 ## 
-##   STATEFP        GEOID   ALAND          polygon
-##     &lt;chr&gt;        &lt;chr&gt;   &lt;dbl&gt;           &lt;list&gt;
-## 1      37 370510020023 1015519  &lt;tbl_df [74,2]&gt;
-## 2      37 370510025043 8867636 &lt;tbl_df [381,2]&gt;
-## 3      37 370510007013 2430423 &lt;tbl_df [330,2]&gt;</code></pre>
+##   STATEFP        GEOID   ALAND   polygons
+##     &lt;chr&gt;        &lt;chr&gt;   &lt;dbl&gt;     &lt;list&gt;
+## 1      37 370510020023 1015519 &lt;list [1]&gt;
+## 2      37 370510025043 8867636 &lt;list [1]&gt;
+## 3      37 370510007013 2430423 &lt;list [1]&gt;</code></pre>
 </div>
 
 
