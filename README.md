@@ -1,7 +1,5 @@
-geoplyr: Working with spatial data inside dataframes
+# geoplyr
 
-Given the advent of nested dataframes (tidyr) and purrr tools, can spatial data be stored in columns of dataframes such that dplyr tools can be used?
+[![Project Status: Abandoned](https://www.repostatus.org/badges/latest/abandoned.svg)](https://www.repostatus.org/#abandoned)
 
-In addition to this, other parallel solutions we are discussing:
-- geojson/turf/lawn workflow that does not depend on rgdal or sp and provides a lightweight way to work with the most common spatial workflows
-- making R spatial tools work nicely with SQL (ala PostGIS)
+This repository has been archived. The former README is now in [README-NOT.md](README-NOT.md).
